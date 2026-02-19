@@ -1,14 +1,13 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import jakarta.validation.Valid;
 import java.util.*;
-
 
 @RestController
 @RequestMapping("/films")
@@ -19,30 +18,25 @@ public class FilmController {
     private int nextId = 1;
 
     @PostMapping
-    public ResponseEntity<Film> createFilm(@RequestBody Film film) {
+    public ResponseEntity<Film> createFilm(@Valid @RequestBody Film film) {
         log.info("Создание фильма: название ='{}'", film.getName());
 
-        try {
-            film.validate();
-            film.setId(nextId++);
-            filmStorage.put(film.getId(), film);
+        film.setId(nextId++);
+        filmStorage.put(film.getId(), film);
 
-            log.info("Успешно создан фильм с ID ={}", film.getId());
-            return ResponseEntity.status(201).body(film);
-        } catch (ValidationException ex) {
-            log.warn("Ошибка валидации: {}", ex.getMessage());
-            throw ex; // Передаётся в GlobalExceptionHandler
-        }
+        log.info("Успешно создан фильм с ID ={}", film.getId());
+        return ResponseEntity.status(201).body(film);
     }
 
     @PutMapping
-    public ResponseEntity<Film> updateFilm(@RequestBody Film filmUpdate) {
+    public ResponseEntity<Film> updateFilm(@Valid @RequestBody Film filmUpdate) {
         Integer id = filmUpdate.getId();
         log.info("Обновление фильма по ID ={}", id);
 
+        // Вместо возврата ResponseEntity.badRequest() бросаем исключение
         if (id == null) {
-            log.warn("Отсутсвует значение поля ID в структуре объекта.");
-            return ResponseEntity.badRequest().build();
+            log.warn("Отсутствует значение поля ID в структуре объекта.");
+            throw new ValidationException("ID фильма должен быть указан.");
         }
 
         Film existingFilm = filmStorage.get(id);
@@ -51,20 +45,14 @@ public class FilmController {
             throw new ResourceNotFoundException("Фильм с указанным id не найден.");
         }
 
-        try {
-            filmUpdate.validate();
+        // Обновляем поля существующего фильма
+        existingFilm.setName(filmUpdate.getName());
+        existingFilm.setDescription(filmUpdate.getDescription());
+        existingFilm.setReleaseDate(filmUpdate.getReleaseDate());
+        existingFilm.setDuration(filmUpdate.getDuration());
 
-            existingFilm.setName(filmUpdate.getName());
-            existingFilm.setDescription(filmUpdate.getDescription());
-            existingFilm.setReleaseDate(filmUpdate.getReleaseDate());
-            existingFilm.setDuration(filmUpdate.getDuration());
-
-            log.info("Фильм успешно обновлен: id={}, name='{}'", id, existingFilm.getName());
-            return ResponseEntity.ok(existingFilm);
-        } catch (ValidationException ex) {
-            log.warn("Ошибка валидации при обновлении: {}", ex.getMessage());
-            throw ex;
-        }
+        log.info("Фильм успешно обновлен: id={}, name='{}'", id, existingFilm.getName());
+        return ResponseEntity.ok(existingFilm);
     }
 
     @GetMapping
@@ -81,7 +69,8 @@ public class FilmController {
         Film film = filmStorage.get(id);
         if (film == null) {
             log.warn("Фильм не найден: id={}", id);
-            return ResponseEntity.notFound().build();
+            // Здесь тоже бросаем ResourceNotFoundException для единообразия
+            throw new ResourceNotFoundException("Фильм с указанным id не найден.");
         }
 
         log.debug("Фильм найден: id={}, name='{}'", id, film.getName());
@@ -94,7 +83,7 @@ public class FilmController {
 
         if (!filmStorage.containsKey(id)) {
             log.warn("Фильм для удаления не найден: id={}", id);
-            return ResponseEntity.notFound().build();
+            throw new ResourceNotFoundException("Фильм с указанным id не найден.");
         }
 
         filmStorage.remove(id);
