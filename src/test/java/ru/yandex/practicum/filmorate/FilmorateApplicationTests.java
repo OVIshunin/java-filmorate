@@ -182,7 +182,7 @@ class FilmorateApplicationTests {
         user.setLogin("");
 
         Set<ConstraintViolation<User>> violations = validator.validate(user);
-        assertEquals(2, violations.size());
+        assertEquals(1, violations.size());
 
         ConstraintViolation<User> violation = violations.iterator().next();
         assertEquals("Логин не может быть пустым.", violation.getMessage());

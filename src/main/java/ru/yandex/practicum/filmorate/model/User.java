@@ -2,6 +2,8 @@ package ru.yandex.practicum.filmorate.model;
 
 import lombok.Data;
 import jakarta.validation.constraints.*;
+import ru.yandex.practicum.filmorate.validator.ValidLogin;
+
 import java.time.LocalDate;
 
 @Data
@@ -12,8 +14,7 @@ public class User {
     @Email(message = "Электронная почта должна содержать символ @ и быть корректным адресом.")
     private String email;
 
-    @NotBlank(message = "Логин не может быть пустым.")
-    @Pattern(regexp = "\\S+", message = "Логин не может содержать пробелы.")
+    @ValidLogin
     private String login;
 
     private String name;
