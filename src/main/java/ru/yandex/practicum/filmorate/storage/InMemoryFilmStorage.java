@@ -13,14 +13,13 @@ import java.util.stream.Collectors;
 public class InMemoryFilmStorage implements FilmStorage {
 
     private final Map<Integer, Film> films = new HashMap<>();
-    private final Map<Integer, Set<Integer>> likes = new HashMap<>(); // filmId -> Set of userId
     private int nextId = 1;
 
     @Override
     public Film create(Film film) {
         film.setId(nextId++);
+        film.setLikes(new HashSet<>()); // Инициализируем пустое множество лайков
         films.put(film.getId(), film);
-        likes.put(film.getId(), new HashSet<>());
         log.debug("Фильм создан: id={}, name='{}'", film.getId(), film.getName());
         return film;
     }
@@ -31,6 +30,11 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (!films.containsKey(id)) {
             throw new ResourceNotFoundException("Фильм с id=" + id + " не найден");
         }
+
+        // Теперь лайки в объекте Film и мы сохраняем их, если обновляем поля фильма
+        Film existingFilm = films.get(id);
+        film.setLikes(existingFilm.getLikes());
+
         films.put(id, film);
         log.debug("Фильм обновлён: id={}, name='{}'", id, film.getName());
         return film;
@@ -50,7 +54,6 @@ public class InMemoryFilmStorage implements FilmStorage {
     public boolean delete(Integer id) {
         if (films.containsKey(id)) {
             films.remove(id);
-            likes.remove(id);
             log.debug("Фильм удалён: id={}", id);
             return true;
         }
@@ -59,35 +62,36 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public void addLike(Integer filmId, Integer userId) {
-        if (!films.containsKey(filmId)) {
+        Film film = films.get(filmId);
+        if (film == null) {
             throw new ResourceNotFoundException("Фильм с id=" + filmId + " не найден");
         }
-        Set<Integer> filmLikes = likes.get(filmId);
-        if (filmLikes.add(userId)) {
-            log.debug("Лайк добавлен: filmId={}, userId={}", filmId, userId);
-        }
+
+        film.getLikes().add(userId);
+        log.debug("Лайк добавлен: filmId={}, userId={}", filmId, userId);
     }
 
     @Override
     public void removeLike(Integer filmId, Integer userId) {
-        if (!films.containsKey(filmId)) {
+        Film film = films.get(filmId);
+        if (film == null) {
             throw new ResourceNotFoundException("Фильм с id=" + filmId + " не найден");
         }
-        Set<Integer> filmLikes = likes.get(filmId);
-        if (filmLikes.remove(userId)) {
-            log.debug("Лайк удалён: filmId={}, userId={}", filmId, userId);
-        }
+
+        film.getLikes().remove(userId);
+        log.debug("Лайк удалён: filmId={}, userId={}", filmId, userId);
     }
 
     @Override
     public List<Film> getPopularFilms(int count) {
         return films.values().stream()
                 .sorted((f1, f2) -> {
-                    int likes1 = likes.getOrDefault(f1.getId(), Collections.emptySet()).size();
-                    int likes2 = likes.getOrDefault(f2.getId(), Collections.emptySet()).size();
+                    int likes1 = f1.getLikes().size();
+                    int likes2 = f2.getLikes().size();
                     return Integer.compare(likes2, likes1); // убывание
                 })
                 .limit(count)
                 .collect(Collectors.toList());
     }
+
 }
