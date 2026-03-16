@@ -1,105 +1,80 @@
 package ru.yandex.practicum.filmorate.controller;
 
-
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ResourceNotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-
+import ru.yandex.practicum.filmorate.service.UserService;
 import jakarta.validation.Valid;
-import java.util.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
 @Slf4j
+@RequiredArgsConstructor
 public class UserController {
 
-    private final Map<Integer, User> userStorage = new HashMap<>();
-    private int nextId = 1;
+    private final UserService userService;
 
     @PostMapping
     public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
-        log.info("Получен запрос на создание пользователя: login='{}'", user.getLogin());
-
-        // Если name пустое — используем login
-        if (user.getName() == null || user.getName().trim().isEmpty()) {
-            user.setName(user.getLogin());
-            log.debug("Имя не заполнено, был использован логин: '{}'", user.getName());
-        }
-
-        user.setId(nextId++);
-        userStorage.put(user.getId(), user);
-
-        log.info("Пользователь успешно создан с ID ={}", user.getId());
-        return ResponseEntity.status(201).body(user);
+        log.info("POST /users - создание пользователя: login={}", user.getLogin());
+        User createdUser = userService.createUser(user);
+        return ResponseEntity.status(201).body(createdUser);
     }
 
     @PutMapping
-    public ResponseEntity<User> updateUser(@Valid @RequestBody User userUpdate) {
-        Integer id = userUpdate.getId();
-        log.info("Получен запрос на обновление пользователя по ID ={}", id);
-
-        // Вместо возврата ResponseEntity.badRequest() бросаем исключение
-        if (id == null) {
-            log.warn("Отсутствует значение поля ID в структуре объекта.");
-            throw new ValidationException("ID пользователя должен быть указан.");
-        }
-
-        User existingUser = userStorage.get(id);
-        if (existingUser == null) {
-            log.warn("Пользователь для обновления данных не найден: id={}", id);
-            throw new ResourceNotFoundException("Пользователь с указанным id не найден.");
-        }
-
-        // Если name пустое — используем login
-        if (userUpdate.getName() == null || userUpdate.getName().trim().isEmpty()) {
-            userUpdate.setName(userUpdate.getLogin());
-            log.debug("Имя было пустым, использовался логин: '{}'", userUpdate.getName());
-        }
-
-        existingUser.setEmail(userUpdate.getEmail());
-        existingUser.setLogin(userUpdate.getLogin());
-        existingUser.setName(userUpdate.getName());
-        existingUser.setBirthday(userUpdate.getBirthday());
-
-        log.info("Данные пользователя успешно обновлены: id={}, login='{}'", id, existingUser.getLogin());
-        return ResponseEntity.ok(existingUser);
+    public ResponseEntity<User> updateUser(@Valid @RequestBody User user) {
+        log.info("PUT /users - обновление пользователя: id={}", user.getId());
+        User updatedUser = userService.updateUser(user);
+        return ResponseEntity.ok(updatedUser);
     }
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
-        log.info("Получен запрос на вывод всех пользователей, количество: {}", userStorage.size());
-        List<User> users = new ArrayList<>(userStorage.values());
-        return ResponseEntity.ok(users);
+        log.info("GET /users - получение всех пользователей");
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Integer id) {
-        log.info("Получен запрос на получение данных пользователя по ID ={}", id);
-
-        User user = userStorage.get(id);
-        if (user == null) {
-            log.warn("Пользователь не найден: id={}", id);
-            throw new ResourceNotFoundException("Пользователь с указанным id не найден.");
-        }
-
-        log.debug("Пользователь найден: id={}, login='{}'", id, user.getLogin());
-        return ResponseEntity.ok(user);
+        log.info("GET /users/{} - получение пользователя по id", id);
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
-        log.info("Получен запрос на удаление данных пользователя по ID ={}", id);
-
-        if (!userStorage.containsKey(id)) {
-            log.warn("Пользователь не найден: id={}", id);
-            throw new ResourceNotFoundException("Пользователь с указанным id не найден.");
-        }
-
-        userStorage.remove(id);
-        log.info("Пользователь успешно удален: id={}", id);
+        log.info("DELETE /users/{} - удаление пользователя", id);
+        userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/friends/{friendId}")
+    public ResponseEntity<Void> addFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        log.info("PUT /users/{}/friends/{} - добавление в друзья", id, friendId);
+        userService.addFriend(id, friendId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public ResponseEntity<Void> removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        log.info("DELETE /users/{}/friends/{} - удаление из друзей", id, friendId);
+        userService.removeFriend(id, friendId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/friends")
+    public ResponseEntity<List<User>> getUserFriends(@PathVariable Integer id) {
+        log.info("GET /users/{}/friends - получение друзей пользователя", id);
+        return ResponseEntity.ok(userService.getUserFriends(id));
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public ResponseEntity<List<User>> getCommonFriends(
+            @PathVariable Integer id, @PathVariable Integer otherId) {
+        log.info("GET /users/{}/friends/common/{} - получение общих друзей", id, otherId);
+        return ResponseEntity.ok(userService.getCommonFriends(id, otherId));
     }
 }
