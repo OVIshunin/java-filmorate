@@ -5,10 +5,6 @@ import jakarta.validation.constraints.*;
 import ru.yandex.practicum.filmorate.validator.ValidLogin;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Data
 public class User {
