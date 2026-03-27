@@ -27,17 +27,10 @@ public class Film {
     @Positive(message = "Продолжительность фильма должна быть положительным числом.")
     private Integer duration;
 
-    // Множество пользователей, поставивших лайк
-    private Set<Integer> likes = new HashSet<>();
-
     // Жанры фильма (может быть несколько)
     private Set<Genre> genres = new LinkedHashSet<>();
 
     // Рейтинг MPA
     private Mpa mpa;
 
-    // Вспомогательный метод для получения количества лайков
-    public int getLikesCount() {
-        return likes != null ? likes.size() : 0;
-    }
 }

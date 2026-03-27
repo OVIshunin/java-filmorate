@@ -72,9 +72,7 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> findAll() {
         String sql = "SELECT * FROM practicum.users";
-        List<User> users = jdbcTemplate.query(sql, userRowMapper);
-        users.forEach(this::loadFriends);
-        return users;
+        return jdbcTemplate.query(sql, userRowMapper);
     }
 
     @Override
@@ -82,9 +80,6 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT * FROM practicum.users WHERE id = ?";
         try {
             User user = jdbcTemplate.queryForObject(sql, userRowMapper, id);
-            if (user != null) {
-                loadFriends(user);
-            }
             return Optional.ofNullable(user);
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -116,7 +111,8 @@ public class UserDbStorage implements UserStorage {
         Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
 
         if (count == null || count == 0) {
-            String sql = "INSERT INTO practicum.friendships (user_id, friend_id, status) VALUES (?, ?, ?)";
+            String sql = "INSERT INTO practicum.friendships (user_id, friend_id, status) " +
+                    "VALUES (?, ?, ?)";
             jdbcTemplate.update(sql, userId, friendId, FriendshipStatus.PENDING.name());
             log.debug("Запрос в друзья отправлен: userId={}, friendId={}", userId, friendId);
         }
@@ -138,25 +134,20 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void removeFriend(Integer userId, Integer friendId) {
-        // Проверяем, что оба пользователя существуют
         if (!userExists(userId) || !userExists(friendId)) {
             throw new ResourceNotFoundException("Пользователь не найден");
         }
 
-        // Проверяем, что дружба существует
         String checkSql = "SELECT COUNT(*) FROM practicum.friendships WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
 
         if (count == null || count == 0) {
-            // Если дружбы нет, ничего не удаляем
-            log.debug("Дружба не найдена: userId={}, friendId={}", userId, friendId);
+            log.debug("Попытка удалить несуществующую дружбу: userId={}, friendId={}", userId, friendId);
             return;
         }
 
-        // Удаляем дружбу в обе стороны
-        String sql = "DELETE FROM practicum.friendships WHERE (user_id = ? AND friend_id = ?) " +
-                "OR (user_id = ? AND friend_id = ?)";
-        jdbcTemplate.update(sql, userId, friendId, friendId, userId);
+        String sql = "DELETE FROM practicum.friendships WHERE user_id = ? AND friend_id = ?";
+        jdbcTemplate.update(sql, userId, friendId);
         log.debug("Дружба удалена: userId={}, friendId={}", userId, friendId);
     }
 
@@ -171,10 +162,7 @@ public class UserDbStorage implements UserStorage {
                 "INNER JOIN practicum.friendships f ON u.id = f.friend_id " +
                 "WHERE f.user_id = ?";
 
-        List<User> friends = jdbcTemplate.query(sql, userRowMapper, userId);
-        friends.forEach(this::loadFriends);
-
-        return friends;
+        return jdbcTemplate.query(sql, userRowMapper, userId);
     }
 
     @Override
@@ -188,14 +176,17 @@ public class UserDbStorage implements UserStorage {
                 "INNER JOIN practicum.friendships f ON u.id = f.friend_id " +
                 "WHERE f.user_id = ? AND f.status = ?";
 
-        List<User> friends = jdbcTemplate.query(sql, userRowMapper, userId, FriendshipStatus.CONFIRMED.name());
-        friends.forEach(this::loadFriends);
-
-        return friends;
+        return jdbcTemplate.query(sql, userRowMapper, userId, FriendshipStatus.CONFIRMED.name());
     }
 
     @Override
     public List<User> getCommonFriends(Integer userId, Integer otherId) {
+        if (!userExists(userId) || !userExists(otherId)) {
+            throw new ResourceNotFoundException("Пользователь не найден");
+        }
+
+        // Общие друзья — все, кто есть в списках друзей у обоих пользователей
+        // без проверки статуса
         String sql = "SELECT u.* FROM practicum.users u " +
                 "WHERE u.id IN (" +
                 "    SELECT f1.friend_id FROM practicum.friendships f1 " +
@@ -205,32 +196,12 @@ public class UserDbStorage implements UserStorage {
                 "    WHERE f2.user_id = ?" +
                 ")";
 
-        List<User> commonFriends = jdbcTemplate.query(
-                sql, userRowMapper,
-                userId,
-                otherId
-        );
-
-        commonFriends.forEach(this::loadFriends);
-
-        return commonFriends;
+        return jdbcTemplate.query(sql, userRowMapper, userId, otherId);
     }
-
-    // Вспомогательные методы
 
     private boolean userExists(Integer id) {
         String sql = "SELECT COUNT(*) FROM practicum.users WHERE id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;
-    }
-
-    private void loadFriends(User user) {
-        String sql = "SELECT friend_id, status FROM practicum.friendships WHERE user_id = ?";
-
-        jdbcTemplate.query(sql, rs -> {
-            Integer friendId = rs.getInt("friend_id");
-            FriendshipStatus status = FriendshipStatus.valueOf(rs.getString("status"));
-            user.addFriend(friendId, status);
-        }, user.getId());
     }
 }

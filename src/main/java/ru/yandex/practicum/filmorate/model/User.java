@@ -26,45 +26,5 @@ public class User {
     @NotNull(message = "Дата рождения не может быть пустой.")
     @Past(message = "Дата рождения не может быть в будущем.")
     private LocalDate birthday;
-     private Map<Integer, FriendshipStatus> friends = new HashMap<>();
 
-    public void addFriend(Integer friendId) {
-        friends.put(friendId, FriendshipStatus.PENDING);
-    }
-
-    public void addFriend(Integer friendId, FriendshipStatus status) {
-        friends.put(friendId, status);
-    }
-
-    public void removeFriend(Integer friendId) {
-        friends.remove(friendId);
-    }
-
-    public boolean isFriend(Integer friendId) {
-        return friends.containsKey(friendId);
-    }
-
-    public FriendshipStatus getFriendStatus(Integer friendId) {
-        return friends.get(friendId);
-    }
-
-    public void confirmFriend(Integer friendId) {
-        if (friends.containsKey(friendId)) {
-            friends.put(friendId, FriendshipStatus.CONFIRMED);
-        }
-    }
-
-    public Set<Integer> getConfirmedFriends() {
-        return friends.entrySet().stream()
-                .filter(entry -> entry.getValue() == FriendshipStatus.CONFIRMED)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-    }
-
-    public Set<Integer> getPendingFriends() {
-        return friends.entrySet().stream()
-                .filter(entry -> entry.getValue() == FriendshipStatus.PENDING)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-    }
 }
