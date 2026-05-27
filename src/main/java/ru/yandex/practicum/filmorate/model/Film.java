@@ -7,15 +7,12 @@ import lombok.Data;
 import ru.yandex.practicum.filmorate.validator.ValidReleaseDate;
 
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Data
 public class Film {
     private Integer id;
-    // Перенесем лайки в Film
-    private Set<Integer> likes = new HashSet<>();
-
 
     @NotBlank(message = "Название фильма не может быть пустым.")
     private String name;
@@ -27,5 +24,12 @@ public class Film {
     private LocalDate releaseDate;
 
     @Positive(message = "Продолжительность фильма должна быть положительным числом.")
-    private Integer duration; // в минутах
+    private Integer duration;
+
+    // Жанры фильма (может быть несколько)
+    private Set<Genre> genres = new LinkedHashSet<>();
+
+    // Рейтинг MPA
+    private Mpa mpa;
+
 }

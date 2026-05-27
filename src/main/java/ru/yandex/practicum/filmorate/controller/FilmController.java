@@ -69,12 +69,6 @@ public class FilmController {
     public ResponseEntity<List<Film>> getPopularFilms(
             @RequestParam(defaultValue = "10") Integer count) {
         log.info("GET /films/popular?count={} - получение популярных фильмов", count);
-
-        // Проверка на не отрицательное количество фильмов
-        if (count <= 0) {
-            throw new IllegalArgumentException("Количество фильмов должно быть положительным числом");
-        }
-
         return ResponseEntity.ok(filmService.getPopularFilms(count));
     }
 }

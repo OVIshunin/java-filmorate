@@ -51,13 +51,23 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    // Отправить запрос в друзья
     @PutMapping("/{id}/friends/{friendId}")
     public ResponseEntity<Void> addFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
-        log.info("PUT /users/{}/friends/{} - добавление в друзья", id, friendId);
+        log.info("PUT /users/{}/friends/{} - отправка запроса в друзья", id, friendId);
         userService.addFriend(id, friendId);
         return ResponseEntity.ok().build();
     }
 
+    // Подтвердить дружбу
+    @PutMapping("/{id}/friends/{friendId}/confirm")
+    public ResponseEntity<Void> confirmFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        log.info("PUT /users/{}/friends/{}/confirm - подтверждение дружбы", id, friendId);
+        userService.confirmFriend(id, friendId);
+        return ResponseEntity.ok().build();
+    }
+
+    // Удалить из друзей
     @DeleteMapping("/{id}/friends/{friendId}")
     public ResponseEntity<Void> removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
         log.info("DELETE /users/{}/friends/{} - удаление из друзей", id, friendId);
@@ -65,12 +75,14 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    // Получить список друзей
     @GetMapping("/{id}/friends")
     public ResponseEntity<List<User>> getUserFriends(@PathVariable Integer id) {
-        log.info("GET /users/{}/friends - получение друзей пользователя", id);
+        log.info("GET /users/{}/friends - получение списка друзей", id);
         return ResponseEntity.ok(userService.getUserFriends(id));
     }
 
+    // Получить список общих друзей
     @GetMapping("/{id}/friends/common/{otherId}")
     public ResponseEntity<List<User>> getCommonFriends(
             @PathVariable Integer id, @PathVariable Integer otherId) {

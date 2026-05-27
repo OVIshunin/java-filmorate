@@ -22,4 +22,5 @@ public class User {
     @NotNull(message = "Дата рождения не может быть пустой.")
     @Past(message = "Дата рождения не может быть в будущем.")
     private LocalDate birthday;
+
 }
